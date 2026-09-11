@@ -20,7 +20,7 @@ version = 0.1
 
 # (list) Application requirements
 # pyjnius e adicionado para permitir a comunicacao com a API de voz nativa do Android
-requirements = python3,kivy,pyjnius
+requirements = python3==3.11.0, hostpython3==3.11.0, kivy
 
 # (str) Supported orientation (one of landscape, sensorLandscape, portrait or all)
 orientation = portrait
