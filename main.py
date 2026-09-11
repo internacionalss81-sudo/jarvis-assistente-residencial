@@ -10,9 +10,10 @@ from kivy.uix.button import Button
 from kivy.uix.gridlayout import GridLayout
 from kivy.uix.label import Label
 from kivy.uix.scrollview import ScrollView
+from kivy.uix.video import Video
 
 # Configuração da Janela (Simulação PC)
-Window.size = (380, 680)
+Window.size = (380, 720)
 Window.clearcolor = (0, 0, 0, 1)
 
 # IP DO SEU ESP32
@@ -59,6 +60,8 @@ class RoundedButton(Button):
 class CasaInteligenteApp(App):
 
     def build(self):
+        self.icon = "icone.png"
+
         self.logado = False
         self.session = requests.Session()
 
@@ -130,7 +133,38 @@ class CasaInteligenteApp(App):
         card_temp.add_widget(self.lbl_status)
         main_layout.add_widget(card_temp)
 
-        # 3. GRADE DE BOTÕES
+        # 3. STREAM DA CÂMERA YOOSEE (192.168.1.49) - Protegido contra falhas de DLL no PC
+        lbl_cam_titulo = Label(
+            text="CÂMERA YOOSEE (AO VIVO)",
+            font_size="12sp",
+            bold=True,
+            color=(1, 0.5, 0, 1),
+            size_hint_y=None,
+            height=20,
+        )
+        main_layout.add_widget(lbl_cam_titulo)
+
+        try:
+            self.cam_stream = Video(
+                source="rtsp://admin:23121478@192.168.1.49:554/onvif1",
+                state="play",
+                options={"eos": "loop"},
+                size_hint_y=None,
+                height=200,
+            )
+            main_layout.add_widget(self.cam_stream)
+        except Exception as e:
+            print("Player de vídeo indisponível neste ambiente:", e)
+            lbl_erro_cam = Label(
+                text="[Vídeo indisponível no PC]",
+                font_size="12sp",
+                color=(0.7, 0.7, 0.7, 1),
+                size_hint_y=None,
+                height=40,
+            )
+            main_layout.add_widget(lbl_erro_cam)
+
+        # 4. GRADE DE BOTÕES (Luzes, Ventilador e TV)
         grid = GridLayout(cols=2, spacing=10, size_hint_y=None, height=130)
 
         self.btn_sala = RoundedButton(
@@ -154,7 +188,6 @@ class CasaInteligenteApp(App):
         )
         self.btn_vent.bind(on_press=lambda x: self.enviar_comando("/vent"))
 
-        # Botão TV com efeito de piscar ao clicar
         self.btn_tv = RoundedButton(
             text="TV (IR)",
             bg_color=(0.15, 0.15, 0.15, 1),
@@ -172,7 +205,7 @@ class CasaInteligenteApp(App):
         grid.add_widget(self.btn_tv)
         main_layout.add_widget(grid)
 
-        # 4. BOTÃO GARAGEM (Efeito de piscar durante o acionamento)
+        # 5. BOTÃO GARAGEM
         self.btn_garagem = RoundedButton(
             text="GARAGEM",
             bg_color=(0.15, 0.15, 0.15, 1),
@@ -187,7 +220,7 @@ class CasaInteligenteApp(App):
         )
         main_layout.add_widget(self.btn_garagem)
 
-        # 5. BOTÃO MODO NOITE
+        # 6. BOTÃO MODO NOITE
         self.btn_noite = RoundedButton(
             text="🌙  MODO NOITE",
             bg_color=(0.1, 0.1, 0.1, 1),
@@ -198,7 +231,7 @@ class CasaInteligenteApp(App):
         self.btn_noite.bind(on_press=lambda x: self.enviar_comando("/noite"))
         main_layout.add_widget(self.btn_noite)
 
-        # 6. BOTÃO FALAR COM JAVA
+        # 7. BOTÃO FALAR COM JAVA
         self.btn_java = RoundedButton(
             text="🎙️  FALAR COM JAVA",
             bg_color=(1, 0.6, 0, 1),
@@ -208,7 +241,7 @@ class CasaInteligenteApp(App):
         )
         main_layout.add_widget(self.btn_java)
 
-        # 7. BOTÃO ABRIR PORTA (Pisca em verde)
+        # 8. BOTÃO ABRIR PORTA
         self.btn_porta = RoundedButton(
             text="ABRIR PORTA",
             bg_color=(0, 0, 0, 1),
@@ -275,7 +308,7 @@ class CasaInteligenteApp(App):
                     )
             except Exception:
                 self.logado = False
-            
+
             time.sleep(2)
 
     def atualizar_interface(self, dados):
@@ -304,7 +337,6 @@ class CasaInteligenteApp(App):
 
         threading.Thread(target=requisitar, daemon=True).start()
 
-    # Função para fazer o botão acender temporariamente e apagar depois do acionamento
     def enviar_comando_pulso(
         self, rota, btn, tempo_segundos, cor_pulso=(1, 0.6, 0, 1)
     ):

@@ -1,4 +1,5 @@
 [app]
+
 # (string) Title of your application
 title = Casa Inteligente
 
@@ -14,11 +15,17 @@ source.dir = .
 # (list) Source files to include (let empty to include all the files)
 source.include_exts = py,png,jpg,kv,atlas
 
-# (string) Application versioning
-version = 0.1
+# (list) List of inclusions using pattern matching
+source.include_patterns = assets/*,*.png
 
-# (list) Application requirements
-requirements = python3,kivy
+# (string) Application versioning
+version = 1.0.0
+
+# (list) Application requirements (incluindo ffpyplayer para suporte a vídeo)
+requirements = python3,kivy,requests,urllib3,chardet,idna,certifi,ffpyplayer
+
+# (str) Icon of the application
+icon.filename = %(source.dir)s/icone.png
 
 # (str) Supported orientation (one of landscape, sensorLandscape, portrait or all)
 orientation = portrait
@@ -26,8 +33,8 @@ orientation = portrait
 # (bool) Indicate if the application should be fullscreen or not
 fullscreen = 0
 
-# (list) Permissions required by the app
-android.permissions = INTERNET, RECORD_AUDIO
+# (list) Permissions required by the app (incluindo rede e Wi-Fi para falar com o ESP32 e a câmera)
+android.permissions = INTERNET,ACCESS_NETWORK_STATE,ACCESS_WIFI_STATE,RECORD_AUDIO
 
 # (int) Target Android API
 android.api = 33
@@ -35,11 +42,17 @@ android.api = 33
 # (int) Minimum API required
 android.minapi = 21
 
+# (int) Android NDK version to use
+android.ndk = 25b
+
 # (bool) Accept SDK licenses
 android.accept_sdk_license = True
 
 # (list) The Android architectures to build for
-android.archs = arm64-v8a
+android.archs = arm64-v8a, armeabi-v7a
+
+# (bool) enable Android logcat
+android.logcat_filters = *:S python:D
 
 [buildozer]
 # (int) Log level (0 = error only, 1 = info, 2 = debug (with command output))
