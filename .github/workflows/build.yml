@@ -1,71 +1,34 @@
-[app]
+name: CI
 
-# (str) Title of your application
-title = Casa Inteligente
+on:
+  push:
+    branches: [ main, master ]
 
-# (str) Package name
-package.name = casainteligente
+jobs:
+  build:
+    runs-on: ubuntu-latest
 
-# (str) Package domain (needed for android/ios packaging)
-package.domain = org.casainteligente
+    steps:
+    - uses: actions/checkout@v4
 
-# (str) Source code where the main.py live
-source.dir = .
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.10'
 
-# (list) Source files to include (include icone.png)
-source.include_exts = py,png,jpg,kv,atlas
+    - name: Install dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y git zip unzip openjdk-17-jdk autoconf libtool pkg-config zlib1g-dev libncurses5-dev ncurses-dev libsdl2-dev libsdl2-image-dev libsdl2-mixer-dev libsdl2-ttf-dev
 
-# (list) List of inclusions using pattern matching
-source.include_patterns = assets/*,*.png
+    - name: Build with Buildozer
+      uses: ArtemSBulgakov/buildozer-action@v1
+      id: buildozer
+      with:
+        command: buildozer android debug
 
-# (str) Application versioning
-version = 1.0.0
-
-# (list) Application requirements
-# Requests e urllib3 sao necessarios para comunicacao HTTP com o ESP32
-requirements = python3,kivy,requests,urllib3,chardet,idna,certifi
-
-# (str) Custom source folders for requirements
-# requirements.source.kivy = ../kivy
-
-# (str) Icon of the application
-icon.filename = %(source.dir)s/icone.png
-
-# (str) Supported orientation (landscape, sensorLandscape, portrait or all)
-orientation = portrait
-
-# (bool) Indicate if the application should be fullscreen or not
-fullscreen = 0
-
-# (list) Permissions
-# Internet e permissao de rede sao essenciais para falar com o ESP32
-android.permissions = INTERNET,ACCESS_NETWORK_STATE,ACCESS_WIFI_STATE
-
-# (int) Target Android API, should be as high as possible.
-android.api = 33
-
-# (int) Minimum API required
-android.minapi = 21
-
-# (int) Android NDK version to use
-android.ndk = 25b
-
-# (bool) If True, then skip trying to update the Android sdk
-android.skip_update = False
-
-# (bool) If True, then automatically accept SDK licenses
-android.accept_sdk_license = True
-
-# (str) The Android arch to build for
-android.archs = arm64-v8a, armeabi-v7a
-
-# (bool) enable Android logcat
-android.logcat_filters = *:S python:D
-
-[buildozer]
-
-# (int) Log level (0 = error only, 1 = info, 2 = debug (with command output))
-log_level = 2
-
-# (int) Display warning if buildozer is run as root (0 = False, 1 = True)
-warn_on_root = 1
+    - name: Upload APK
+      uses: actions/upload-artifact@v4
+      with:
+        name: package
+        path: bin/*.apk
