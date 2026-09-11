@@ -1,3 +1,6 @@
+import threading
+import time
+import requests
 from kivy.app import App
 from kivy.clock import Clock
 from kivy.core.window import Window
@@ -7,15 +10,17 @@ from kivy.uix.button import Button
 from kivy.uix.gridlayout import GridLayout
 from kivy.uix.label import Label
 from kivy.uix.scrollview import ScrollView
-import time
 
-# Configuração da janela (simulando tela de celular no PC)
+# Configuração da Janela (Simulação PC)
 Window.size = (380, 680)
-Window.clearcolor = (0, 0, 0, 1)  # Fundo preto puro
+Window.clearcolor = (0, 0, 0, 1)
+
+# IP DO SEU ESP32
+ESP32_IP = "http://192.168.1.221"
+PIN_ACESSO = "23121478"
 
 
 class RoundedButton(Button):
-    """Botão personalizado com bordas arredondadas e troca de cores"""
 
     def __init__(
         self,
@@ -54,7 +59,9 @@ class RoundedButton(Button):
 class CasaInteligenteApp(App):
 
     def build(self):
-        # Container principal com rolagem para não cortar os botões em telas menores
+        self.logado = False
+        self.session = requests.Session()
+
         scroll = ScrollView()
         main_layout = BoxLayout(
             orientation="vertical",
@@ -62,16 +69,14 @@ class CasaInteligenteApp(App):
             spacing=12,
             size_hint_y=None,
         )
-        main_layout.bind(
-            minimum_height=main_layout.setter("height")
-        )
+        main_layout.bind(minimum_height=main_layout.setter("height"))
 
-        # 1. RELÓGIO DIGITAL (Topo)
+        # 1. RELÓGIO DIGITAL
         self.lbl_clock = Label(
             text="00:00:00",
             font_size="32sp",
             bold=True,
-            color=(1, 0.5, 0, 1),  # Laranja brilhante
+            color=(1, 0.5, 0, 1),
             size_hint_y=None,
             height=45,
         )
@@ -96,36 +101,36 @@ class CasaInteligenteApp(App):
             size=lambda inst, val: setattr(self.rect_card, "size", val),
         )
 
-        lbl_temp = Label(
-            text="28.5°C",
+        self.lbl_temp = Label(
+            text="--°C",
             font_size="30sp",
             bold=True,
             color=(1, 1, 1, 1),
             size_hint_y=None,
             height=40,
         )
-        lbl_umid = Label(
-            text="UMIDADE: 68.0%",
+        self.lbl_umid = Label(
+            text="UMIDADE: --%",
             font_size="13sp",
             bold=True,
-            color=(0, 0.8, 0.3, 1),  # Verde
+            color=(0, 0.8, 0.3, 1),
             size_hint_y=None,
             height=25,
         )
-        lbl_status = Label(
-            text="Pronto",
+        self.lbl_status = Label(
+            text="Conectando...",
             font_size="12sp",
-            color=(1, 0.5, 0, 1),  # Laranja
+            color=(1, 0.5, 0, 1),
             size_hint_y=None,
             height=20,
         )
 
-        card_temp.add_widget(lbl_temp)
-        card_temp.add_widget(lbl_umid)
-        card_temp.add_widget(lbl_status)
+        card_temp.add_widget(self.lbl_temp)
+        card_temp.add_widget(self.lbl_umid)
+        card_temp.add_widget(self.lbl_status)
         main_layout.add_widget(card_temp)
 
-        # 3. GRADE DE BOTÕES (SALA, QUARTO, VENTILADOR, TV IR)
+        # 3. GRADE DE BOTÕES
         grid = GridLayout(cols=2, spacing=10, size_hint_y=None, height=130)
 
         self.btn_sala = RoundedButton(
@@ -133,42 +138,31 @@ class CasaInteligenteApp(App):
             bg_color=(0.15, 0.15, 0.15, 1),
             text_color=(1, 1, 1, 1),
         )
-        self.btn_sala.bind(
-            on_press=lambda x: self.toggle_btn(
-                self.btn_sala, (1, 0.6, 0, 1), (0, 0, 0, 1)
-            )
-        )
+        self.btn_sala.bind(on_press=lambda x: self.enviar_comando("/sala"))
 
         self.btn_quarto = RoundedButton(
             text="QUARTO",
-            bg_color=(1, 0.6, 0, 1),  # Ativo por padrão (Laranja)
-            text_color=(0, 0, 0, 1),
+            bg_color=(0.15, 0.15, 0.15, 1),
+            text_color=(1, 1, 1, 1),
         )
-        self.btn_quarto.bind(
-            on_press=lambda x: self.toggle_btn(
-                self.btn_quarto, (1, 0.6, 0, 1), (0, 0, 0, 1)
-            )
-        )
+        self.btn_quarto.bind(on_press=lambda x: self.enviar_comando("/quarto"))
 
         self.btn_vent = RoundedButton(
             text="VENTILADOR",
-            bg_color=(1, 0.6, 0, 1),  # Ativo por padrão (Laranja)
-            text_color=(0, 0, 0, 1),
+            bg_color=(0.15, 0.15, 0.15, 1),
+            text_color=(1, 1, 1, 1),
         )
-        self.btn_vent.bind(
-            on_press=lambda x: self.toggle_btn(
-                self.btn_vent, (1, 0.6, 0, 1), (0, 0, 0, 1)
-            )
-        )
+        self.btn_vent.bind(on_press=lambda x: self.enviar_comando("/vent"))
 
+        # Botão TV com efeito de piscar ao clicar
         self.btn_tv = RoundedButton(
             text="TV (IR)",
             bg_color=(0.15, 0.15, 0.15, 1),
             text_color=(1, 1, 1, 1),
         )
         self.btn_tv.bind(
-            on_press=lambda x: self.toggle_btn(
-                self.btn_tv, (1, 0.6, 0, 1), (0, 0, 0, 1)
+            on_press=lambda x: self.enviar_comando_pulso(
+                "/ir_tv", self.btn_tv, 0.5
             )
         )
 
@@ -178,7 +172,7 @@ class CasaInteligenteApp(App):
         grid.add_widget(self.btn_tv)
         main_layout.add_widget(grid)
 
-        # 4. BOTÃO GARAGEM
+        # 4. BOTÃO GARAGEM (Efeito de piscar durante o acionamento)
         self.btn_garagem = RoundedButton(
             text="GARAGEM",
             bg_color=(0.15, 0.15, 0.15, 1),
@@ -187,8 +181,8 @@ class CasaInteligenteApp(App):
             height=50,
         )
         self.btn_garagem.bind(
-            on_press=lambda x: self.toggle_btn(
-                self.btn_garagem, (1, 0.6, 0, 1), (0, 0, 0, 1)
+            on_press=lambda x: self.enviar_comando_pulso(
+                "/garagem", self.btn_garagem, 0.8
             )
         )
         main_layout.add_widget(self.btn_garagem)
@@ -201,6 +195,7 @@ class CasaInteligenteApp(App):
             size_hint_y=None,
             height=50,
         )
+        self.btn_noite.bind(on_press=lambda x: self.enviar_comando("/noite"))
         main_layout.add_widget(self.btn_noite)
 
         # 6. BOTÃO FALAR COM JAVA
@@ -213,31 +208,120 @@ class CasaInteligenteApp(App):
         )
         main_layout.add_widget(self.btn_java)
 
-        # 7. BOTÃO ABRIR PORTA
+        # 7. BOTÃO ABRIR PORTA (Pisca em verde)
         self.btn_porta = RoundedButton(
             text="ABRIR PORTA",
             bg_color=(0, 0, 0, 1),
             text_color=(0, 0.9, 0.3, 1),
-            border_color=(0, 0.9, 0.3, 1),  # Borda verde
+            border_color=(0, 0.9, 0.3, 1),
             size_hint_y=None,
             height=50,
+        )
+        self.btn_porta.bind(
+            on_press=lambda x: self.enviar_comando_pulso(
+                "/destravar", self.btn_porta, 1.5, cor_pulso=(0, 0.9, 0.3, 1)
+            )
         )
         main_layout.add_widget(self.btn_porta)
 
         scroll.add_widget(main_layout)
+
+        threading.Thread(target=self.conectar_e_atualizar, daemon=True).start()
+
         return scroll
 
     def update_clock(self, dt):
         self.lbl_clock.text = time.strftime("%H:%M:%S")
 
-    def toggle_btn(self, btn, active_bg, active_text):
-        if btn.custom_bg == active_bg:
+    def conectar_e_atualizar(self):
+        while True:
+            if not self.logado:
+                try:
+                    r = self.session.get(
+                        f"{ESP32_IP}/login?senha={PIN_ACESSO}", timeout=3
+                    )
+                    if r.status_code == 200:
+                        self.logado = True
+                        Clock.schedule_once(
+                            lambda dt: setattr(
+                                self.lbl_status, "text", "Conectado"
+                            )
+                        )
+                    else:
+                        Clock.schedule_once(
+                            lambda dt: setattr(
+                                self.lbl_status, "text", "Erro de PIN"
+                            )
+                        )
+                except Exception:
+                    Clock.schedule_once(
+                        lambda dt: setattr(
+                            self.lbl_status, "text", "ESP32 Desconectado"
+                        )
+                    )
+                    time.sleep(3)
+                    continue
+
+            try:
+                res = self.session.get(f"{ESP32_IP}/status", timeout=2)
+                if res.status_code == 200:
+                    dados = dict(
+                        x.split(":")
+                        for x in res.text.split("|")
+                        if ":" in x
+                    )
+                    Clock.schedule_once(
+                        lambda dt: self.atualizar_interface(dados)
+                    )
+            except Exception:
+                self.logado = False
+            
+            time.sleep(2)
+
+    def atualizar_interface(self, dados):
+        self.lbl_temp.text = f"{dados.get('Temp', '--')}°C"
+        self.lbl_umid.text = f"UMIDADE: {dados.get('Umid', '--')}%"
+
+        self.definir_cor_botao(self.btn_sala, dados.get("Sala") == "ON")
+        self.definir_cor_botao(self.btn_quarto, dados.get("Quarto") == "ON")
+        self.definir_cor_botao(self.btn_vent, dados.get("Vent") == "ON")
+
+    def definir_cor_botao(self, btn, ativo):
+        if ativo:
+            btn.custom_bg = (1, 0.6, 0, 1)
+            btn.color = (0, 0, 0, 1)
+        else:
             btn.custom_bg = (0.15, 0.15, 0.15, 1)
             btn.color = (1, 1, 1, 1)
-        else:
-            btn.custom_bg = active_bg
-            btn.color = active_text
         btn._update_canvas()
+
+    def enviar_comando(self, rota):
+        def requisitar():
+            try:
+                self.session.get(f"{ESP32_IP}{rota}", timeout=2)
+            except Exception as e:
+                print(f"Erro ao enviar comando {rota}: {e}")
+
+        threading.Thread(target=requisitar, daemon=True).start()
+
+    # Função para fazer o botão acender temporariamente e apagar depois do acionamento
+    def enviar_comando_pulso(
+        self, rota, btn, tempo_segundos, cor_pulso=(1, 0.6, 0, 1)
+    ):
+        cor_original_bg = btn.custom_bg
+        cor_original_txt = btn.color
+
+        btn.custom_bg = cor_pulso
+        btn.color = (0, 0, 0, 1)
+        btn._update_canvas()
+
+        def restaurar_botao(dt):
+            btn.custom_bg = cor_original_bg
+            btn.color = cor_original_txt
+            btn._update_canvas()
+
+        Clock.schedule_once(restaurar_botao, tempo_segundos)
+        self.enviar_comando(rota)
 
 
 if __name__ == "__main__":
