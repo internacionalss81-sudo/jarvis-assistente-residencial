@@ -14,7 +14,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Configurar Python
-        uses: actions/python-versions@v5
+        uses: actions/setup-python@v5
         with:
           python-version: '3.10'
 
@@ -23,6 +23,14 @@ jobs:
         with:
           distribution: 'temurin'
           java-version: '17'
+
+      - name: Cache do Buildozer
+        uses: actions/cache@v4
+        with:
+          path: .buildozer
+          key: ${{ runner.os }}-buildozer-${{ hashFiles('buildozer.spec') }}
+          restore-keys: |
+            ${{ runner.os }}-buildozer-
 
       - name: Instalar Dependências do Sistema
         run: |
@@ -44,17 +52,13 @@ jobs:
             zip \
             autoconf \
             libtool \
-            pkg-config
+            pkg-config \
+            libssl-dev
 
       - name: Instalar Buildozer e Cython
         run: |
           python -m pip install --upgrade pip
-          pip install buildozer cython
-
-      - name: Aceitar Licenças do Android SDK
-        run: |
-          mkdir -p ~/.buildozer/android/platform/android-sdk/cmdline-tools/latest/bin
-          yes | buildozer android debug || true
+          pip install "cython<3.0.0" buildozer
 
       - name: Compilar APK
         run: |
