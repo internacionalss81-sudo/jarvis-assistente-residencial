@@ -1,21 +1,23 @@
 @echo off
+chcp 65001 >nul
 echo ========================================
-echo   Enviando atualizacoes para o GitHub
+echo   Enviando atualizacoes para o GitHub...
 echo ========================================
 
-:: Adiciona todas as alteracoes feitas
+:: Adiciona todos os arquivos modificados
 git add .
 
-:: Pergunta a mensagem do commit para voce digitar
-set /p mensagem="Digite a mensagem da atualizacao: "
+:: Faz o commit automaticamente com a data e hora atuais
+git commit -m "Atualizacao automatica via script"
 
-:: Faz o commit com a mensagem informada
-git commit -m "%mensagem%"
-
-:: Envia para o repositorio oficial (branch main)
+:: Tenta enviar para a branch main, se nao conseguir tenta master
 git push origin main
+if %errorlevel% neq 0 (
+    echo Tentando enviar pela branch master...
+    git push origin master
+)
 
 echo ========================================
-echo   Processo concluido com sucesso!
+echo   Processo finalizado!
 echo ========================================
 pause
