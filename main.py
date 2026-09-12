@@ -1,23 +1,31 @@
+import os
 import threading
 import time
 import requests
+import cv2
+import logging
+
+# Desativa logs excessivos de DEBUG do urllib3 no terminal
+logging.getLogger("urllib3").setLevel(logging.WARNING)
+
 from kivy.app import App
 from kivy.clock import Clock
 from kivy.core.window import Window
 from kivy.graphics import Color, RoundedRectangle
+from kivy.graphics.texture import Texture
 from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.button import Button
 from kivy.uix.gridlayout import GridLayout
+from kivy.uix.image import Image
 from kivy.uix.label import Label
 from kivy.uix.scrollview import ScrollView
-from kivy.uix.video import Video
 
 # Configuração da Janela (Simulação PC)
 Window.size = (380, 720)
 Window.clearcolor = (0, 0, 0, 1)
 
 # IP DO SEU ESP32
-ESP32_IP = "http://192.168.1.221"
+ESP32_IP = "http://192.168.1.6"
 PIN_ACESSO = "23121478"
 
 
@@ -64,6 +72,8 @@ class CasaInteligenteApp(App):
 
         self.logado = False
         self.session = requests.Session()
+        self.capture = None
+        self.frame_atual = None
 
         scroll = ScrollView()
         main_layout = BoxLayout(
@@ -133,7 +143,7 @@ class CasaInteligenteApp(App):
         card_temp.add_widget(self.lbl_status)
         main_layout.add_widget(card_temp)
 
-        # 3. STREAM DA CÂMERA YOOSEE (192.168.1.49) - Protegido contra falhas de DLL no PC
+        # 3. STREAM DA CÂMERA WI-FI YOOSEE (192.168.1.8)
         lbl_cam_titulo = Label(
             text="CÂMERA YOOSEE (AO VIVO)",
             font_size="12sp",
@@ -144,25 +154,12 @@ class CasaInteligenteApp(App):
         )
         main_layout.add_widget(lbl_cam_titulo)
 
-        try:
-            self.cam_stream = Video(
-                source="rtsp://admin:23121478@192.168.1.49:554/onvif1",
-                state="play",
-                options={"eos": "loop"},
-                size_hint_y=None,
-                height=200,
-            )
-            main_layout.add_widget(self.cam_stream)
-        except Exception as e:
-            print("Player de vídeo indisponível neste ambiente:", e)
-            lbl_erro_cam = Label(
-                text="[Vídeo indisponível no PC]",
-                font_size="12sp",
-                color=(0.7, 0.7, 0.7, 1),
-                size_hint_y=None,
-                height=40,
-            )
-            main_layout.add_widget(lbl_erro_cam)
+        self.cam_stream = Image(size_hint_y=None, height=200)
+        main_layout.add_widget(self.cam_stream)
+
+        # Inicializa a câmera em thread separada
+        threading.Thread(target=self.iniciar_stream_camera, daemon=True).start()
+        Clock.schedule_interval(self.atualizar_textura_kivy, 1.0 / 30.0)
 
         # 4. GRADE DE BOTÕES (Luzes, Ventilador e TV)
         grid = GridLayout(cols=2, spacing=10, size_hint_y=None, height=130)
@@ -262,6 +259,43 @@ class CasaInteligenteApp(App):
         threading.Thread(target=self.conectar_e_atualizar, daemon=True).start()
 
         return scroll
+
+    def iniciar_stream_camera(self):
+        os.environ["OPENCV_FFMPEG_CAPTURE_OPTIONS"] = (
+            "rtsp_transport;tcp|stimeout;10000000"
+        )
+
+        # Usando o canal secundário (onvif2) que é mais leve para o OpenCV e para o APK
+        url = "rtsp://admin:23121478l%21@192.168.1.8:554/onvif2"
+
+        while True:
+            cap = cv2.VideoCapture(url, cv2.CAP_FFMPEG)
+
+            if cap.isOpened():
+                self.capture = cap
+                print("Câmera Yoosee (sub-stream) conectada com sucesso!")
+                while True:
+                    ret, frame = self.capture.read()
+                    if ret and frame is not None:
+                        self.frame_atual = frame
+                    else:
+                        print("Perda de quadros. Tentando reconectar...")
+                        break
+                self.capture.release()
+            else:
+                print("Aguardando resposta do canal secundário...")
+
+            time.sleep(2)
+
+    def atualizar_textura_kivy(self, dt):
+        if self.frame_atual is not None:
+            buf = cv2.flip(self.frame_atual, 0).tobytes()
+            texture = Texture.create(
+                size=(self.frame_atual.shape[1], self.frame_atual.shape[0]),
+                colorfmt="bgr",
+            )
+            texture.blit_buffer(buf, colorfmt="bgr", bufferfmt="ubyte")
+            self.cam_stream.texture = texture
 
     def update_clock(self, dt):
         self.lbl_clock.text = time.strftime("%H:%M:%S")

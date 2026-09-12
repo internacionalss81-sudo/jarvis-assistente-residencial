@@ -2,9 +2,7 @@ name: CI
 
 on:
   push:
-    branches: [ main, master ]
-  pull_request:
-    branches: [ main, master ]
+    branches: [ principal, main ]
 
 jobs:
   build:
@@ -14,25 +12,38 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Set up Python
+      - name: Configurar Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.10'
+     - name: Salvar logs em caso de falha
+       if: failure()
+     uses: actions/upload-artifact@v4
+     with:
+    name: buildozer-logs
+    path: .buildozer/logs/
 
-      - name: Install dependencies
+      - name: Instalar Dependencias do Sistema
         run: |
-          sudo apt-get update
-          sudo apt-get install -y \
-            git zip unzip autoconf libtool pkg-config \
-            zlib1g-dev libncurses5-dev libncursesw5-dev libtinfo5 cmake libffi-dev libssl-dev
+          sudo apt update
+          sudo apt install -y git zip unzip openjdk-17-jdk python3-pip autoconf libtool pkg-config zlib1g-dev libncurses5-dev libncursesw5-dev libtinfo5 cmake libffi-dev libssl-dev
 
-      - name: Install Buildozer and Cython
+      - name: Instalar Android SDK Build-Tools (AIDL)
+        run: |
+          sudo apt install -y android-sdk build-essential
+
+      - name: Instalar Buildozer e Cython
         run: |
           pip install --upgrade pip
-          pip install cython==0.29.36 buildozer
+          pip install buildozer cython==0.29.33
 
-      - name: Build with Buildozer
-        run: buildozer android debug
+      - name: Aceitar Licencas do Android SDK
+        run: |
+          yes | buildozer android status || true
+
+      - name: Compilar APK
+        run: |
+          buildozer -v android debug
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
