@@ -1,59 +1,63 @@
-name: Build Android APK
+[app]
 
-on:
-  push:
-    branches: [ main, master ]
+# (str) Title of your application
+title = Jarvis Assistente Residencial
 
-jobs:
-  build:
-    runs-on: ubuntu-latest
+# (str) Package name
+package.name = jarvisassistente
 
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+# (str) Package domain (needed for android packaging)
+package.domain = org.jarvis
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.10'
+# (str) Source directory where the main.py file is located
+source.dir = .
 
-      - name: Install dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y \
-            python3-pip \
-            build-python \
-            git \
-            zip \
-            unzip \
-            autoconf \
-            libtool \
-            pkg-config \
-            zlib1g-dev \
-            libncurses5-dev \
-            libncursesw5-dev \
-            libffi-dev \
-            libssl-dev
+# (list) Source files to include (let it blank to include all files)
+source.include_exts = py,png,jpg,kv,atlas,json
 
-      - name: Install Buildozer and dependencies
-        run: |
-          pip install --upgrade pip
-          pip install buildozer cython
+# (list) Source files to exclude (let it blank to exclude none)
+source.exclude_exts = spec
 
-      # Se o buildozer baixar o SDK/NDK, este passo garante que as licenças sejam aceitas
-      - name: Accept Android SDK licenses
-        run: |
-          mkdir -p ~/.buildozer/android/platform/android-sdk
-          yes | sdkmanager --licenses || true
+# (list) List of directory to exclude (let it blank to exclude none)
+source.exclude_dirs = tests, bin, venv, .git, .github
 
-      - name: Build with Buildozer
-        uses: ArtemSBulgakov/buildozer-action@v1
-        id: buildozer
-        with:
-          command: android debug
+# (str) Application versioning
+version = 0.1
 
-      - name: Upload APK artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: package
-          path: bin/*.apk
+# (list) Application requirements
+requirements = python3,kivy,requests,urllib3,chardet,idna,certifi,opencv-python,ffpyplayer
+
+# (str) Supported orientations (portrait, landscape or all)
+orientation = portrait
+
+# (list) The Android specific permissions
+android.permissions = INTERNET, CAMERA, WRITE_EXTERNAL_STORAGE, READ_EXTERNAL_STORAGE
+
+# (int) Target Android API, should be as high as possible.
+android.api = 33
+
+# (int) Minimum API your APK will support.
+android.minapi = 21
+
+# (str) Android NDK version to use
+android.ndk = 25b
+
+# (str) Android SDK version to use
+android.sdk = 33
+
+# (str) Android build tools version to use
+android.build_tools_version = 33.0.0
+
+# (bool) Use --private data storage (True) or --dir public storage (False)
+android.private_storage = True
+
+# (str) Android logcat filters
+android.logcat_filters = *:S python:D
+
+[buildozer]
+
+# (int) Log level (0 = error only, 1 = info, 2 = debug (with command output))
+log_level = 2
+
+# (int) Display warning if buildozer is run as root (0 = False, 1 = True)
+warn_on_root = 1
