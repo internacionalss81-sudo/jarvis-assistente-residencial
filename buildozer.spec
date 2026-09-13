@@ -9,6 +9,9 @@ package.name = jarvisassistente
 # (str) Package domain (needed for android packaging)
 package.domain = org.jarvis
 
+# (str) Source directory where the main.py file is located
+source.dir = .
+
 # (list) Source files to include (let it blank to include all files)
 source.include_exts = py,png,jpg,kv,atlas,json
 
@@ -18,8 +21,10 @@ source.exclude_exts = spec
 # (list) List of directory to exclude (let it blank to exclude none)
 source.exclude_dirs = tests, bin, venv, .git, .github
 
+# (str) Application versioning
+version = 0.1
+
 # (list) Application requirements
-# (Certifique-se de usar python3 e as bibliotecas sem conflitos)
 requirements = python3,kivy,requests,urllib3,chardet,idna,certifi,opencv-python,ffpyplayer
 
 # (str) Supported orientations (portrait, landscape or all)
