@@ -17,7 +17,7 @@ jobs:
         with:
           python-version: '3.10'
 
-      - name: Install dependencies
+      - name: Install system dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y \
@@ -32,25 +32,20 @@ jobs:
             libncurses5-dev \
             libncursesw5-dev \
             libffi-dev \
-            libssl-dev
+            libssl-dev \
+            libltdl-dev
 
-      - name: Install Buildozer and dependencies
+      - name: Install Buildozer and Cython
         run: |
           pip install --upgrade pip
-          pip install buildozer cython
+          pip install --upgrade buildozer cython
 
-      - name: Pre-create Android SDK directory
+      - name: Build APK with Buildozer
         run: |
-          mkdir -p ~/.buildozer/android/platform/android-sdk
-
-      - name: Build with Buildozer
-        uses: ArtemSBulgakov/buildozer-action@v1
-        id: buildozer
-        with:
-          command: android debug
+          buildozer -v android debug
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: package
+          name: jarvis-apk
           path: bin/*.apk
