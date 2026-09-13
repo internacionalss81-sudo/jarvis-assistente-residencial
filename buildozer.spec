@@ -1,62 +1,52 @@
 [app]
 
-# (string) Title of your application
-title = Casa Inteligente
+# (str) Title of your application
+title = Jarvis Assistente Residencial
 
-# (string) Package name
-package.name = casainteligente
+# (str) Package name
+package.name = jarvisassistente
 
-# (string) Package domain (needed for android packaging)
-package.domain = org.casa
+# (str) Package domain (needed for android packaging)
+package.domain = org.jarvis
 
-# (str) Source code where the main.py live
-source.dir = .
+# (list) Source files to include (let it blank to include all files)
+source.include_exts = py,png,jpg,kv,atlas,json
 
-# (list) Source files to include (let empty to include all the files)
-source.include_exts = py,png,jpg,kv,atlas
+# (list) Source files to exclude (let it blank to exclude none)
+source.exclude_exts = spec
 
-# (list) List of inclusions using pattern matching
-source.include_patterns = assets/*,*.png
+# (list) List of directory to exclude (let it blank to exclude none)
+source.exclude_dirs = tests, bin, venv, .git, .github
 
-# (string) Application versioning
-version = 1.0.0
+# (list) Application requirements
+# (Certifique-se de usar python3 e as bibliotecas sem conflitos)
+requirements = python3,kivy,requests,urllib3,chardet,idna,certifi,opencv-python,ffpyplayer
 
-# (list) Application requirements (incluindo ffpyplayer para suporte a vídeo)
-requirements = python3,kivy,requests,urllib3,chardet,idna,certifi,ffpyplayer
-
-# (str) Icon of the application
-icon.filename = %(source.dir)s/icone.png
-
-# (str) Supported orientation (one of landscape, sensorLandscape, portrait or all)
+# (str) Supported orientations (portrait, landscape or all)
 orientation = portrait
 
-# (bool) Indicate if the application should be fullscreen or not
-fullscreen = 0
+# (list) The Android specific permissions
+android.permissions = INTERNET, CAMERA, WRITE_EXTERNAL_STORAGE, READ_EXTERNAL_STORAGE
 
-# (list) Permissions required by the app (incluindo rede e Wi-Fi para falar com o ESP32 e a câmera)
-android.permissions = INTERNET,ACCESS_NETWORK_STATE,ACCESS_WIFI_STATE,RECORD_AUDIO
-
-# (int) Target Android API
+# (int) Target Android API, should be as high as possible.
 android.api = 33
 
-# (int) Minimum API required
+# (int) Minimum API your APK will support.
 android.minapi = 21
 
-# (int) Android NDK version to use
+# (str) Android NDK version to use
 android.ndk = 25b
 
-# (bool) Accept SDK licenses
-android.accept_sdk_license = True
+# (bool) Use --private data storage (True) or --dir public storage (False)
+android.private_storage = True
 
-# (list) The Android architectures to build for
-android.archs = arm64-v8a, armeabi-v7a
-
-# (bool) enable Android logcat
+# (str) Android logcat filters
 android.logcat_filters = *:S python:D
 
 [buildozer]
+
 # (int) Log level (0 = error only, 1 = info, 2 = debug (with command output))
 log_level = 2
 
-# (int) Display warning if buildozer is run as root (0 = disable, 1 = enable)
+# (int) Display warning if buildozer is run as root (0 = False, 1 = True)
 warn_on_root = 1
